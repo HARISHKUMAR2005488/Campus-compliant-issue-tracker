@@ -10,7 +10,7 @@
 
 set -e  # Exit immediately on any error
 
-APP_DIR="/home/$(whoami)/campus-tracker"
+APP_DIR="/home/$(whoami)/Campus-compliant-issue-tracker"
 SERVICE_NAME="campus-tracker"
 
 echo "=========================================="
@@ -118,7 +118,7 @@ echo ""
 echo "[6/7] Installing systemd service..."
 
 # Update WorkingDirectory and ExecStart paths in service file
-sed -i "s|/home/ec2-user/campus-tracker|$APP_DIR|g" "$APP_DIR/campus-tracker.service"
+sed -i "s|/home/ec2-user/Campus-compliant-issue-tracker|$APP_DIR|g" "$APP_DIR/campus-tracker.service"
 sed -i "s|User=ec2-user|User=$(whoami)|g"           "$APP_DIR/campus-tracker.service"
 sed -i "s|Group=ec2-user|Group=$(whoami)|g"         "$APP_DIR/campus-tracker.service"
 

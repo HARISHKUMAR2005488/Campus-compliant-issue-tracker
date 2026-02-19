@@ -8,15 +8,15 @@ User=ec2-user
 Group=ec2-user
 
 # Path to your project directory on EC2
-WorkingDirectory=/home/ec2-user/campus-tracker
+WorkingDirectory=/home/ec2-user/Campus-compliant-issue-tracker
 
 # Load .env variables
-EnvironmentFile=/home/ec2-user/campus-tracker/.env
+EnvironmentFile=/home/ec2-user/Campus-compliant-issue-tracker/.env
 
 # Start gunicorn via the venv python (adjust path if you use a different venv location)
-ExecStart=/home/ec2-user/campus-tracker/venv/bin/gunicorn \
-    -c /home/ec2-user/campus-tracker/gunicorn.conf.py \
-    aws:app
+ExecStart=/home/ec2-user/Campus-compliant-issue-tracker/venv/bin/gunicorn \
+    -c /home/ec2-user/Campus-compliant-issue-tracker/gunicorn.conf.py \
+    app:app
 
 # Restart on failure
 Restart=always

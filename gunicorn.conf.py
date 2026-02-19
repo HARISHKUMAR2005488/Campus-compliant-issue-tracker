@@ -1,6 +1,6 @@
 """
 gunicorn.conf.py — Gunicorn production configuration for EC2
-Run with: gunicorn -c gunicorn.conf.py aws:app
+Run with: gunicorn -c gunicorn.conf.py app:app
 """
 import multiprocessing
 
