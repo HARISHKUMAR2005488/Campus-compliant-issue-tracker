@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart Campus</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e3a5f',
+            primaryLight: '#2d4a6f',
+            primaryDark: '#0f2a4a',
+            accent: '#3b82f6',
+            surface: '#f8fafc',
+            surfaceAlt: '#f1f5f9'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-progress { background: #dbeafe; color: #1e40af; }
+    .status-resolved { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0e7ff; color: #3730a3; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+    .btn-primary { transition: all 0.2s; }
+    .btn-primary:active { transform: scale(0.98); }
+    .card { transition: all 0.2s; }
+    .card:active { transform: scale(0.99); }
+    .toast { animation: toastIn 0.3s ease-out; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full bg-white font-sans text-gray-800">
+  <div id="app" class="h-full w-full overflow-auto"><!-- Toast Container -->
+   <div id="toast-container" class="fixed top-4 left-4 right-4 z-50 flex flex-col gap-2"></div><!-- Loading Overlay -->
+   <div id="loading-overlay" class="fixed inset-0 bg-white/80 z-40 flex items-center justify-center hidden">
+    <div class="flex flex-col items-center gap-3">
+     <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div><span class="text-primary font-medium">Loading...</span>
+    </div>
+   </div><!-- Splash Screen -->
+   <div id="screen-splash" class="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-primary to-primaryDark p-6">
+    <div class="text-center fade-in">
+     <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+      <svg class="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+     </div>
+     <h1 id="splash-title" class="text-3xl font-bold text-white mb-2">Smart Campus</h1>
+     <p id="splash-subtitle" class="text-blue-200 text-lg mb-8">Issue Reporting System</p>
+     <div class="space-y-3 w-full max-w-xs mx-auto"><button onclick="showScreen('student-auth')" class="w-full py-4 bg-white text-primary font-semibold rounded-xl shadow-lg btn-primary"> Student Portal </button> <button onclick="showScreen('admin-login')" class="w-full py-4 bg-primary/20 text-white font-semibold rounded-xl border-2 border-white/30 btn-primary"> Admin Portal </button>
+     </div>
+    </div>
+   </div><!-- Student Auth Screen -->
+   <div id="screen-student-auth" class="h-full w-full bg-surface hidden">
+    <div class="bg-primary text-white p-4 flex items-center gap-3"><button onclick="showScreen('splash')" class="p-2 -ml-2 rounded-lg hover:bg-white/10">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h2 class="text-lg font-semibold">Student Portal</h2>
+    </div>
+    <div class="p-4"><!-- Auth Tabs -->
+     <div class="flex bg-white rounded-xl p-1 shadow-sm mb-6"><button id="tab-login" onclick="switchAuthTab('login')" class="flex-1 py-3 rounded-lg font-medium transition-all bg-primary text-white">Login</button> <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 py-3 rounded-lg font-medium transition-all text-gray-600">Register</button>
+     </div><!-- Login Form -->
+     <div id="form-login" class="bg-white rounded-2xl p-5 shadow-sm fade-in">
+      <h3 class="text-xl font-semibold text-gray-800 mb-5">Welcome Back</h3>
+      <div class="space-y-4">
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Email Address</label> <input type="email" id="login-email" placeholder="student@campus.edu" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Password</label> <input type="password" id="login-password" placeholder="••••••••" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div><button onclick="handleStudentLogin()" class="w-full py-4 bg-primary text-white font-semibold rounded-xl btn-primary mt-2"> Sign In </button>
+      </div>
+     </div><!-- Register Form -->
+     <div id="form-register" class="bg-white rounded-2xl p-5 shadow-sm hidden fade-in">
+      <h3 class="text-xl font-semibold text-gray-800 mb-5">Create Account</h3>
+      <div class="space-y-4">
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Full Name</label> <input type="text" id="reg-name" placeholder="John Doe" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Student ID</label> <input type="text" id="reg-studentid" placeholder="STU2024001" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Department</label> <select id="reg-department" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface"> <option value="">Select Department</option> <option>Computer Science</option> <option>Electrical Engineering</option> <option>Mechanical Engineering</option> <option>Civil Engineering</option> <option>Business Administration</option> </select>
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Email Address</label> <input type="email" id="reg-email" placeholder="student@campus.edu" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Password</label> <input type="password" id="reg-password" placeholder="Min 6 characters" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div><button onclick="handleStudentRegister()" class="w-full py-4 bg-primary text-white font-semibold rounded-xl btn-primary mt-2"> Create Account </button>
+      </div>
+     </div>
+    </div>
+   </div><!-- Student Dashboard -->
+   <div id="screen-student-dashboard" class="h-full w-full bg-surface hidden">
+    <div class="bg-primary text-white p-4">
+     <div class="flex items-center justify-between mb-4">
+      <div>
+       <p class="text-blue-200 text-sm">Welcome back,</p>
+       <h2 id="student-name" class="text-lg font-semibold">Student</h2>
+      </div><button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-white/10">
+       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+       </svg></button>
+     </div><!-- Stats Cards -->
+     <div class="grid grid-cols-4 gap-2">
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-student-total" class="text-2xl font-bold">0</p>
+       <p class="text-xs text-blue-200">Total</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-student-pending" class="text-2xl font-bold text-yellow-300">0</p>
+       <p class="text-xs text-blue-200">Pending</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-student-progress" class="text-2xl font-bold text-blue-300">0</p>
+       <p class="text-xs text-blue-200">In Progress</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-student-resolved" class="text-2xl font-bold text-green-300">0</p>
+       <p class="text-xs text-blue-200">Resolved</p>
+      </div>
+     </div>
+    </div>
+    <div class="p-4">
+     <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-800">My Issues</h3><button onclick="showScreen('new-issue')" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium btn-primary">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+       </svg> Report Issue </button>
+     </div>
+     <div id="student-issues-list" class="space-y-3">
+      <div class="bg-white rounded-xl p-8 text-center text-gray-400">
+       <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+       </svg>
+       <p>No issues reported yet</p>
+       <p class="text-sm">Tap "Report Issue" to get started</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- New Issue Form -->
+   <div id="screen-new-issue" class="h-full w-full bg-surface hidden">
+    <div class="bg-primary text-white p-4 flex items-center gap-3"><button onclick="showScreen('student-dashboard')" class="p-2 -ml-2 rounded-lg hover:bg-white/10">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h2 class="text-lg font-semibold">Report New Issue</h2>
+    </div>
+    <div class="p-4 pb-24">
+     <div class="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+      <div><label class="block text-sm font-medium text-gray-600 mb-1">Category *</label> <select id="issue-category" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface"> <option value="">Select Category</option> <option value="Electrical">⚡ Electrical</option> <option value="Lab">🔬 Lab Equipment</option> <option value="Hostel">🏠 Hostel</option> <option value="Network">📶 Network/WiFi</option> <option value="Cleaning">🧹 Cleaning</option> <option value="Other">📋 Other</option> </select>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Block *</label> <select id="issue-block" class="w-full px-3 py-3 border border-gray-200 rounded-xl bg-surface text-sm"> <option value="">Block</option> <option>A</option> <option>B</option> <option>C</option> <option>D</option> <option>E</option> </select>
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Floor *</label> <select id="issue-floor" class="w-full px-3 py-3 border border-gray-200 rounded-xl bg-surface text-sm"> <option value="">Floor</option> <option>Ground</option> <option>1st</option> <option>2nd</option> <option>3rd</option> <option>4th</option> </select>
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Room *</label> <input type="text" id="issue-room" placeholder="101" class="w-full px-3 py-3 border border-gray-200 rounded-xl bg-surface text-sm">
+       </div>
+      </div>
+      <div><label class="block text-sm font-medium text-gray-600 mb-1">Description *</label> <textarea id="issue-description" rows="4" placeholder="Describe the issue in detail..." class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface resize-none"></textarea>
+       <p id="char-count" class="text-xs text-gray-400 mt-1 text-right">0/500</p>
+      </div>
+      <div><label class="block text-sm font-medium text-gray-600 mb-1">Priority *</label>
+       <div class="grid grid-cols-3 gap-2"><button type="button" onclick="selectPriority('Low')" class="priority-btn py-3 rounded-xl border-2 border-gray-200 text-sm font-medium transition-all" data-priority="Low"> 🟢 Low </button> <button type="button" onclick="selectPriority('Medium')" class="priority-btn py-3 rounded-xl border-2 border-gray-200 text-sm font-medium transition-all" data-priority="Medium"> 🟡 Medium </button> <button type="button" onclick="selectPriority('High')" class="priority-btn py-3 rounded-xl border-2 border-gray-200 text-sm font-medium transition-all" data-priority="High"> 🔴 High </button>
+       </div>
+      </div>
+      <div><label class="block text-sm font-medium text-gray-600 mb-1">Attach Image (Optional)</label>
+       <div id="image-upload-area" class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors" onclick="document.getElementById('image-input').click()"><input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+        <div id="upload-placeholder">
+         <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+         </svg>
+         <p class="text-sm text-gray-400">Tap to upload image</p>
+        </div>
+        <div id="image-preview-container" class="hidden"><img id="image-preview" class="max-h-32 mx-auto rounded-lg"> <button type="button" onclick="event.stopPropagation(); removeImage()" class="mt-2 text-sm text-red-500 font-medium">Remove</button>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg"><button onclick="handleSubmitIssue()" class="w-full py-4 bg-primary text-white font-semibold rounded-xl btn-primary"> Submit Issue </button>
+    </div>
+   </div><!-- Issue Detail Screen -->
+   <div id="screen-issue-detail" class="h-full w-full bg-surface hidden">
+    <div class="bg-primary text-white p-4 flex items-center gap-3"><button onclick="goBackFromDetail()" class="p-2 -ml-2 rounded-lg hover:bg-white/10">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h2 class="text-lg font-semibold">Issue Details</h2>
+    </div>
+    <div id="issue-detail-content" class="p-4 space-y-4"><!-- Content populated by JS -->
+    </div>
+   </div><!-- Admin Login -->
+   <div id="screen-admin-login" class="h-full w-full bg-surface hidden">
+    <div class="bg-primaryDark text-white p-4 flex items-center gap-3"><button onclick="showScreen('splash')" class="p-2 -ml-2 rounded-lg hover:bg-white/10">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h2 class="text-lg font-semibold">Admin Portal</h2>
+    </div>
+    <div class="p-4">
+     <div class="bg-white rounded-2xl p-5 shadow-sm fade-in">
+      <div class="w-16 h-16 bg-primaryDark rounded-2xl flex items-center justify-center mx-auto mb-4">
+       <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+       </svg>
+      </div>
+      <h3 class="text-xl font-semibold text-gray-800 mb-1 text-center">Administrator Access</h3>
+      <p class="text-gray-500 text-sm text-center mb-6">Restricted to authorized personnel</p>
+      <div class="space-y-4">
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Admin Email</label> <input type="email" id="admin-email" placeholder="admin@campus.edu" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-600 mb-1">Password</label> <input type="password" id="admin-password" placeholder="••••••••" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface">
+       </div><button onclick="handleAdminLogin()" class="w-full py-4 bg-primaryDark text-white font-semibold rounded-xl btn-primary mt-2"> Access Dashboard </button>
+      </div>
+      <div class="mt-4 p-3 bg-blue-50 rounded-xl">
+       <p class="text-xs text-blue-600 text-center">Demo: admin@campus.edu / admin123</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Admin Dashboard -->
+   <div id="screen-admin-dashboard" class="h-full w-full bg-surface hidden">
+    <div class="bg-primaryDark text-white p-4">
+     <div class="flex items-center justify-between mb-4">
+      <div>
+       <p class="text-blue-200 text-sm">Admin Panel</p>
+       <h2 class="text-lg font-semibold">Dashboard</h2>
+      </div><button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-white/10">
+       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+       </svg></button>
+     </div><!-- Admin Stats -->
+     <div class="grid grid-cols-4 gap-2">
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-admin-total" class="text-2xl font-bold">0</p>
+       <p class="text-xs text-blue-200">Total</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-admin-pending" class="text-2xl font-bold text-yellow-300">0</p>
+       <p class="text-xs text-blue-200">Pending</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-admin-progress" class="text-2xl font-bold text-blue-300">0</p>
+       <p class="text-xs text-blue-200">In Progress</p>
+      </div>
+      <div class="bg-white/10 rounded-xl p-3 text-center">
+       <p id="stat-admin-resolved" class="text-2xl font-bold text-green-300">0</p>
+       <p class="text-xs text-blue-200">Resolved</p>
+      </div>
+     </div>
+    </div>
+    <div class="p-4"><!-- Analytics Chart -->
+     <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-800 mb-3">Issue Analytics</h3>
+      <div id="chart-container" class="h-40">
+       <div class="flex items-end justify-around h-full gap-2">
+        <div class="flex flex-col items-center flex-1">
+         <div id="chart-bar-pending" class="w-full bg-yellow-400 rounded-t-lg transition-all" style="height: 20%"></div><span class="text-xs text-gray-500 mt-1">Pending</span>
+        </div>
+        <div class="flex flex-col items-center flex-1">
+         <div id="chart-bar-progress" class="w-full bg-blue-400 rounded-t-lg transition-all" style="height: 20%"></div><span class="text-xs text-gray-500 mt-1">Progress</span>
+        </div>
+        <div class="flex flex-col items-center flex-1">
+         <div id="chart-bar-resolved" class="w-full bg-green-400 rounded-t-lg transition-all" style="height: 20%"></div><span class="text-xs text-gray-500 mt-1">Resolved</span>
+        </div>
+       </div>
+      </div>
+      <div class="mt-3 pt-3 border-t flex justify-between text-sm"><span class="text-gray-500">Avg Resolution Time:</span> <span id="avg-resolution-time" class="font-semibold text-primary">-- hrs</span>
+      </div>
+     </div><!-- Filters -->
+     <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <div class="grid grid-cols-2 gap-3 mb-3"><select id="filter-category" onchange="applyFilters()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface"> <option value="">All Categories</option> <option value="Electrical">Electrical</option> <option value="Lab">Lab</option> <option value="Hostel">Hostel</option> <option value="Network">Network</option> <option value="Cleaning">Cleaning</option> <option value="Other">Other</option> </select> <select id="filter-status" onchange="applyFilters()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface"> <option value="">All Status</option> <option value="Pending">Pending</option> <option value="In Progress">In Progress</option> <option value="Resolved">Resolved</option> </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3"><select id="filter-priority" onchange="applyFilters()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface"> <option value="">All Priorities</option> <option value="Low">Low</option> <option value="Medium">Medium</option> <option value="High">High</option> </select> <input type="text" id="filter-search" onkeyup="applyFilters()" placeholder="Search..." class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-surface">
+      </div>
+     </div><!-- Issues List -->
+     <h3 class="font-semibold text-gray-800 mb-3">All Issues</h3>
+     <div id="admin-issues-list" class="space-y-3 pb-4">
+      <div class="bg-white rounded-xl p-8 text-center text-gray-400">
+       <p>No issues to display</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Admin Issue Detail -->
+   <div id="screen-admin-issue-detail" class="h-full w-full bg-surface hidden">
+    <div class="bg-primaryDark text-white p-4 flex items-center gap-3"><button onclick="showScreen('admin-dashboard')" class="p-2 -ml-2 rounded-lg hover:bg-white/10">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h2 class="text-lg font-semibold">Manage Issue</h2>
+    </div>
+    <div id="admin-issue-detail-content" class="p-4 space-y-4 pb-24"><!-- Content populated by JS -->
+    </div>
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg"><button onclick="saveAdminChanges()" class="w-full py-4 bg-primaryDark text-white font-semibold rounded-xl btn-primary"> Save Changes </button>
+    </div>
+   </div>
+  </div>
+  <script>
+    // ========== Global State ==========
+    let allData = [];
+    let currentUser = null;
+    let currentIssue = null;
+    let selectedPriority = '';
+    let uploadedImageData = '';
+    let previousScreen = 'student-dashboard';
+
+    const defaultConfig = {
+      app_title: 'Smart Campus',
+      app_subtitle: 'Issue Reporting System',
+      primary_color: '#1e3a5f',
+      secondary_color: '#f8fafc',
+      text_color: '#1f2937',
+      accent_color: '#3b82f6',
+      surface_color: '#ffffff',
+      font_family: 'Inter'
+    };
+
+    // ========== SDK Initialization ==========
+    const dataHandler = {
+      onDataChanged(data) {
+        allData = data;
+        updateAllStats();
+        renderStudentIssues();
+        renderAdminIssues();
+        updateChart();
+      }
+    };
+
+    async function initApp() {
+      try {
+        const dataResult = await window.dataSdk.init(dataHandler);
+        if (!dataResult.isOk) {
+          console.error('Data SDK init failed');
+        }
+      } catch (e) {
+        console.error('SDK initialization error:', e);
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (config) => {
+            const title = config.app_title || defaultConfig.app_title;
+            const subtitle = config.app_subtitle || defaultConfig.app_subtitle;
+            
+            const splashTitle = document.getElementById('splash-title');
+            const splashSubtitle = document.getElementById('splash-subtitle');
+            
+            if (splashTitle) splashTitle.textContent = title;
+            if (splashSubtitle) splashSubtitle.textContent = subtitle;
+            document.title = title;
+          },
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.primary_color || defaultConfig.primary_color,
+                set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); }
+              },
+              {
+                get: () => config.secondary_color || defaultConfig.secondary_color,
+                set: (v) => { config.secondary_color = v; window.elementSdk.setConfig({ secondary_color: v }); }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); }
+              },
+              {
+                get: () => config.accent_color || defaultConfig.accent_color,
+                set: (v) => { config.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); }
+              },
+              {
+                get: () => config.surface_color || defaultConfig.surface_color,
+                set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+            },
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['app_title', config.app_title || defaultConfig.app_title],
+            ['app_subtitle', config.app_subtitle || defaultConfig.app_subtitle]
+          ])
+        });
+      }
+    }
+
+    initApp();
+
+    // ========== Toast Notifications ==========
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-primary',
+        warning: 'bg-yellow-500'
+      };
+      toast.className = `toast ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ========== Screen Navigation ==========
+    function showScreen(screenId) {
+      document.querySelectorAll('[id^="screen-"]').forEach(s => s.classList.add('hidden'));
+      const screen = document.getElementById('screen-' + screenId);
+      if (screen) {
+        screen.classList.remove('hidden');
+        screen.classList.add('fade-in');
+      }
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+    }
+
+    // ========== Auth Tab Switch ==========
+    function switchAuthTab(tab) {
+      const loginTab = document.getElementById('tab-login');
+      const registerTab = document.getElementById('tab-register');
+      const loginForm = document.getElementById('form-login');
+      const registerForm = document.getElementById('form-register');
+
+      if (tab === 'login') {
+        loginTab.classList.add('bg-primary', 'text-white');
+        loginTab.classList.remove('text-gray-600');
+        registerTab.classList.remove('bg-primary', 'text-white');
+        registerTab.classList.add('text-gray-600');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+      } else {
+        registerTab.classList.add('bg-primary', 'text-white');
+        registerTab.classList.remove('text-gray-600');
+        loginTab.classList.remove('bg-primary', 'text-white');
+        loginTab.classList.add('text-gray-600');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    // ========== Student Authentication ==========
+    async function handleStudentLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      if (!email || !password) {
+        showToast('Please fill in all fields', 'error');
+        return;
+      }
+
+      showLoading(true);
+      
+      const user = allData.find(d => d.type === 'user' && d.email === email && d.password === password);
+      
+      if (user) {
+        currentUser = user;
+        document.getElementById('student-name').textContent = user.name || 'Student';
+        showScreen('student-dashboard');
+        showToast('Welcome back, ' + (user.name || 'Student') + '!', 'success');
+      } else {
+        showToast('Invalid email or password', 'error');
+      }
+      
+      showLoading(false);
+    }
+
+    async function handleStudentRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const studentId = document.getElementById('reg-studentid').value.trim();
+      const department = document.getElementById('reg-department').value;
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      if (!name || !studentId || !department || !email || !password) {
+        showToast('Please fill in all fields', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showToast('Please enter a valid email', 'error');
+        return;
+      }
+
+      if (allData.length >= 999) {
+        showToast('Maximum data limit reached', 'error');
+        return;
+      }
+
+      const existingUser = allData.find(d => d.type === 'user' && d.email === email);
+      if (existingUser) {
+        showToast('Email already registered', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      const result = await window.dataSdk.create({
+        type: 'user',
+        name,
+        studentId,
+        department,
+        email,
+        password,
+        createdAt: new Date().toISOString()
+      });
+
+      if (result.isOk) {
+        showToast('Account created! Please login', 'success');
+        switchAuthTab('login');
+        document.getElementById('login-email').value = email;
+        document.getElementById('reg-name').value = '';
+        document.getElementById('reg-studentid').value = '';
+        document.getElementById('reg-department').value = '';
+        document.getElementById('reg-email').value = '';
+        document.getElementById('reg-password').value = '';
+      } else {
+        showToast('Registration failed. Try again.', 'error');
+      }
+
+      showLoading(false);
+    }
+
+    // ========== Admin Authentication ==========
+    function handleAdminLogin() {
+      const email = document.getElementById('admin-email').value.trim();
+      const password = document.getElementById('admin-password').value;
+
+      if (email === 'admin@campus.edu' && password === 'admin123') {
+        currentUser = { type: 'admin', email };
+        showScreen('admin-dashboard');
+        showToast('Welcome, Administrator!', 'success');
+      } else {
+        showToast('Invalid admin credentials', 'error');
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      showScreen('splash');
+      showToast('Logged out successfully', 'info');
+    }
+
+    // ========== Priority Selection ==========
+    function selectPriority(priority) {
+      selectedPriority = priority;
+      document.querySelectorAll('.priority-btn').forEach(btn => {
+        btn.classList.remove('border-primary', 'bg-primary/10');
+        btn.classList.add('border-gray-200');
+      });
+      const selected = document.querySelector(`[data-priority="${priority}"]`);
+      if (selected) {
+        selected.classList.add('border-primary', 'bg-primary/10');
+        selected.classList.remove('border-gray-200');
+      }
+    }
+
+    // ========== Image Upload ==========
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5MB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedImageData = e.target.result;
+        document.getElementById('upload-placeholder').classList.add('hidden');
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        document.getElementById('image-preview').src = uploadedImageData;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage() {
+      uploadedImageData = '';
+      document.getElementById('image-input').value = '';
+      document.getElementById('upload-placeholder').classList.remove('hidden');
+      document.getElementById('image-preview-container').classList.add('hidden');
+    }
+
+    // ========== Character Counter ==========
+    document.getElementById('issue-description')?.addEventListener('input', function() {
+      const count = this.value.length;
+      document.getElementById('char-count').textContent = `${count}/500`;
+      if (count > 500) {
+        this.value = this.value.substring(0, 500);
+      }
+    });
+
+    // ========== Submit Issue ==========
+    async function handleSubmitIssue() {
+      const category = document.getElementById('issue-category').value;
+      const block = document.getElementById('issue-block').value;
+      const floor = document.getElementById('issue-floor').value;
+      const room = document.getElementById('issue-room').value.trim();
+      const description = document.getElementById('issue-description').value.trim();
+
+      if (!category || !block || !floor || !room || !description || !selectedPriority) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+
+      if (description.length < 20) {
+        showToast('Description must be at least 20 characters', 'error');
+        return;
+      }
+
+      if (allData.length >= 999) {
+        showToast('Maximum data limit reached', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      const issueData = {
+        type: 'issue',
+        issueCategory: category,
+        block,
+        floor,
+        room,
+        description,
+        priority: selectedPriority,
+        status: 'Pending',
+        imageData: uploadedImageData || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        resolvedAt: '',
+        adminComment: '',
+        reportedBy: currentUser?.email || 'anonymous',
+        reporterName: currentUser?.name || 'Anonymous'
+      };
+
+      const result = await window.dataSdk.create(issueData);
+
+      if (result.isOk) {
+        showToast('Issue reported successfully!', 'success');
+        resetIssueForm();
+        showScreen('student-dashboard');
+      } else {
+        showToast('Failed to submit issue', 'error');
+      }
+
+      showLoading(false);
+    }
+
+    function resetIssueForm() {
+      document.getElementById('issue-category').value = '';
+      document.getElementById('issue-block').value = '';
+      document.getElementById('issue-floor').value = '';
+      document.getElementById('issue-room').value = '';
+      document.getElementById('issue-description').value = '';
+      document.getElementById('char-count').textContent = '0/500';
+      selectedPriority = '';
+      document.querySelectorAll('.priority-btn').forEach(btn => {
+        btn.classList.remove('border-primary', 'bg-primary/10');
+        btn.classList.add('border-gray-200');
+      });
+      removeImage();
+    }
+
+    // ========== Statistics ==========
+    function updateAllStats() {
+      const issues = allData.filter(d => d.type === 'issue');
+      
+      // Student stats (filtered by current user)
+      if (currentUser && currentUser.type !== 'admin') {
+        const userIssues = issues.filter(i => i.reportedBy === currentUser.email);
+        document.getElementById('stat-student-total').textContent = userIssues.length;
+        document.getElementById('stat-student-pending').textContent = userIssues.filter(i => i.status === 'Pending').length;
+        document.getElementById('stat-student-progress').textContent = userIssues.filter(i => i.status === 'In Progress').length;
+        document.getElementById('stat-student-resolved').textContent = userIssues.filter(i => i.status === 'Resolved').length;
+      }
+
+      // Admin stats (all issues)
+      document.getElementById('stat-admin-total').textContent = issues.length;
+      document.getElementById('stat-admin-pending').textContent = issues.filter(i => i.status === 'Pending').length;
+      document.getElementById('stat-admin-progress').textContent = issues.filter(i => i.status === 'In Progress').length;
+      document.getElementById('stat-admin-resolved').textContent = issues.filter(i => i.status === 'Resolved').length;
+
+      // Calculate average resolution time
+      const resolved = issues.filter(i => i.status === 'Resolved' && i.resolvedAt && i.createdAt);
+      if (resolved.length > 0) {
+        let totalHours = 0;
+        resolved.forEach(i => {
+          const created = new Date(i.createdAt);
+          const resolvedAt = new Date(i.resolvedAt);
+          totalHours += (resolvedAt - created) / (1000 * 60 * 60);
+        });
+        const avg = (totalHours / resolved.length).toFixed(1);
+        document.getElementById('avg-resolution-time').textContent = avg + ' hrs';
+      } else {
+        document.getElementById('avg-resolution-time').textContent = '-- hrs';
+      }
+    }
+
+    // ========== Chart Update ==========
+    function updateChart() {
+      const issues = allData.filter(d => d.type === 'issue');
+      const total = issues.length || 1;
+      
+      const pending = issues.filter(i => i.status === 'Pending').length;
+      const progress = issues.filter(i => i.status === 'In Progress').length;
+      const resolved = issues.filter(i => i.status === 'Resolved').length;
+
+      document.getElementById('chart-bar-pending').style.height = `${Math.max((pending / total) * 100, 5)}%`;
+      document.getElementById('chart-bar-progress').style.height = `${Math.max((progress / total) * 100, 5)}%`;
+      document.getElementById('chart-bar-resolved').style.height = `${Math.max((resolved / total) * 100, 5)}%`;
+    }
+
+    // ========== Render Student Issues ==========
+    function renderStudentIssues() {
+      const container = document.getElementById('student-issues-list');
+      if (!currentUser || currentUser.type === 'admin') return;
+
+      const userIssues = allData.filter(d => d.type === 'issue' && d.reportedBy === currentUser.email);
+
+      if (userIssues.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-xl p-8 text-center text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p>No issues reported yet</p>
+            <p class="text-sm">Tap "Report Issue" to get started</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = [...userIssues].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      container.innerHTML = sorted.map(issue => `
+        <div class="bg-white rounded-xl p-4 shadow-sm card cursor-pointer" onclick="viewIssueDetail('${issue.__backendId}', 'student')">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">${getCategoryIcon(issue.issueCategory)}</span>
+              <span class="font-medium text-gray-800">${issue.issueCategory}</span>
+            </div>
+            <span class="px-2 py-1 rounded-lg text-xs font-medium status-${issue.status.toLowerCase().replace(' ', '')}">${issue.status}</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-2 line-clamp-2">${issue.description}</p>
+          <div class="flex items-center justify-between text-xs text-gray-400">
+            <span>📍 Block ${issue.block}, ${issue.floor} Floor, Room ${issue.room}</span>
+            <span class="px-2 py-0.5 rounded priority-${issue.priority.toLowerCase()}">${issue.priority}</span>
+          </div>
+          <div class="text-xs text-gray-400 mt-2">${formatDate(issue.createdAt)}</div>
+        </div>
+      `).join('');
+    }
+
+    // ========== Render Admin Issues ==========
+    function renderAdminIssues() {
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const container = document.getElementById('admin-issues-list');
+      const categoryFilter = document.getElementById('filter-category')?.value || '';
+      const statusFilter = document.getElementById('filter-status')?.value || '';
+      const priorityFilter = document.getElementById('filter-priority')?.value || '';
+      const searchFilter = document.getElementById('filter-search')?.value.toLowerCase() || '';
+
+      let issues = allData.filter(d => d.type === 'issue');
+
+      if (categoryFilter) issues = issues.filter(i => i.issueCategory === categoryFilter);
+      if (statusFilter) issues = issues.filter(i => i.status === statusFilter);
+      if (priorityFilter) issues = issues.filter(i => i.priority === priorityFilter);
+      if (searchFilter) {
+        issues = issues.filter(i => 
+          i.description?.toLowerCase().includes(searchFilter) ||
+          i.reporterName?.toLowerCase().includes(searchFilter) ||
+          i.block?.toLowerCase().includes(searchFilter)
+        );
+      }
+
+      if (issues.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-xl p-8 text-center text-gray-400">
+            <p>No issues match your filters</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = [...issues].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      container.innerHTML = sorted.map(issue => `
+        <div class="bg-white rounded-xl p-4 shadow-sm card cursor-pointer" onclick="viewIssueDetail('${issue.__backendId}', 'admin')">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">${getCategoryIcon(issue.issueCategory)}</span>
+              <span class="font-medium text-gray-800">${issue.issueCategory}</span>
+            </div>
+            <span class="px-2 py-1 rounded-lg text-xs font-medium status-${issue.status.toLowerCase().replace(' ', '')}">${issue.status}</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-2 line-clamp-2">${issue.description}</p>
+          <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+            <span>📍 Block ${issue.block}, ${issue.floor} Floor, Room ${issue.room}</span>
+            <span class="px-2 py-0.5 rounded priority-${issue.priority.toLowerCase()}">${issue.priority}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">By: ${issue.reporterName || 'Unknown'}</span>
+            <span class="text-gray-400">${formatDate(issue.createdAt)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ========== View Issue Detail ==========
+    function viewIssueDetail(issueId, role) {
+      const issue = allData.find(d => d.__backendId === issueId);
+      if (!issue) return;
+
+      currentIssue = issue;
+      previousScreen = role === 'admin' ? 'admin-dashboard' : 'student-dashboard';
+
+      if (role === 'admin') {
+        renderAdminIssueDetail(issue);
+        showScreen('admin-issue-detail');
+      } else {
+        renderStudentIssueDetail(issue);
+        showScreen('issue-detail');
+      }
+    }
+
+    function goBackFromDetail() {
+      showScreen(previousScreen);
+    }
+
+    function renderStudentIssueDetail(issue) {
+      const container = document.getElementById('issue-detail-content');
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">${getCategoryIcon(issue.issueCategory)}</span>
+              <div>
+                <h3 class="font-semibold text-lg text-gray-800">${issue.issueCategory}</h3>
+                <p class="text-sm text-gray-500">Block ${issue.block}, ${issue.floor} Floor, Room ${issue.room}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex gap-2 mb-4">
+            <span class="px-3 py-1 rounded-lg text-sm font-medium status-${issue.status.toLowerCase().replace(' ', '')}">${issue.status}</span>
+            <span class="px-3 py-1 rounded-lg text-sm font-medium priority-${issue.priority.toLowerCase()}">${issue.priority} Priority</span>
+          </div>
+
+          <div class="border-t pt-4">
+            <h4 class="font-medium text-gray-700 mb-2">Description</h4>
+            <p class="text-gray-600">${issue.description}</p>
+          </div>
+
+          ${issue.imageData ? `
+            <div class="border-t pt-4 mt-4">
+              <h4 class="font-medium text-gray-700 mb-2">Attached Image</h4>
+              <img src="${issue.imageData}" class="rounded-xl max-h-48 w-full object-cover">
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+          <h4 class="font-medium text-gray-700 mb-3">Timeline</h4>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="w-3 h-3 rounded-full bg-blue-500 mt-1.5"></div>
+              <div>
+                <p class="font-medium text-gray-800">Issue Reported</p>
+                <p class="text-sm text-gray-500">${formatDateTime(issue.createdAt)}</p>
+              </div>
+            </div>
+            ${issue.status !== 'Pending' ? `
+              <div class="flex items-start gap-3">
+                <div class="w-3 h-3 rounded-full bg-yellow-500 mt-1.5"></div>
+                <div>
+                  <p class="font-medium text-gray-800">In Progress</p>
+                  <p class="text-sm text-gray-500">${formatDateTime(issue.updatedAt)}</p>
+                </div>
+              </div>
+            ` : ''}
+            ${issue.status === 'Resolved' ? `
+              <div class="flex items-start gap-3">
+                <div class="w-3 h-3 rounded-full bg-green-500 mt-1.5"></div>
+                <div>
+                  <p class="font-medium text-gray-800">Resolved</p>
+                  <p class="text-sm text-gray-500">${formatDateTime(issue.resolvedAt)}</p>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        ${issue.adminComment ? `
+          <div class="bg-white rounded-2xl p-4 shadow-sm">
+            <h4 class="font-medium text-gray-700 mb-2">Admin Response</h4>
+            <p class="text-gray-600 bg-surface p-3 rounded-xl">${issue.adminComment}</p>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function renderAdminIssueDetail(issue) {
+      const container = document.getElementById('admin-issue-detail-content');
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-3xl">${getCategoryIcon(issue.issueCategory)}</span>
+            <div>
+              <h3 class="font-semibold text-lg text-gray-800">${issue.issueCategory}</h3>
+              <p class="text-sm text-gray-500">Block ${issue.block}, ${issue.floor} Floor, Room ${issue.room}</p>
+            </div>
+          </div>
+
+          <div class="border-t pt-4 mb-4">
+            <p class="text-gray-600">${issue.description}</p>
+          </div>
+
+          ${issue.imageData ? `
+            <div class="border-t pt-4">
+              <img src="${issue.imageData}" class="rounded-xl max-h-48 w-full object-cover">
+            </div>
+          ` : ''}
+
+          <div class="border-t pt-4 mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Reported By:</span>
+              <p class="font-medium">${issue.reporterName || 'Unknown'}</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Submitted:</span>
+              <p class="font-medium">${formatDate(issue.createdAt)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+          <h4 class="font-medium text-gray-700 mb-3">Update Status</h4>
+          <div class="grid grid-cols-3 gap-2 mb-4">
+            <button onclick="setAdminStatus('Pending')" class="admin-status-btn py-3 rounded-xl text-sm font-medium border-2 transition-all ${issue.status === 'Pending' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 text-gray-600'}" data-status="Pending">
+              Pending
+            </button>
+            <button onclick="setAdminStatus('In Progress')" class="admin-status-btn py-3 rounded-xl text-sm font-medium border-2 transition-all ${issue.status === 'In Progress' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}" data-status="In Progress">
+              In Progress
+            </button>
+            <button onclick="setAdminStatus('Resolved')" class="admin-status-btn py-3 rounded-xl text-sm font-medium border-2 transition-all ${issue.status === 'Resolved' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600'}" data-status="Resolved">
+              Resolved
+            </button>
+          </div>
+
+          <h4 class="font-medium text-gray-700 mb-2">Update Priority</h4>
+          <div class="grid grid-cols-3 gap-2 mb-4">
+            <button onclick="setAdminPriority('Low')" class="admin-priority-btn py-2 rounded-xl text-sm font-medium border-2 transition-all ${issue.priority === 'Low' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600'}" data-priority="Low">
+              🟢 Low
+            </button>
+            <button onclick="setAdminPriority('Medium')" class="admin-priority-btn py-2 rounded-xl text-sm font-medium border-2 transition-all ${issue.priority === 'Medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 text-gray-600'}" data-priority="Medium">
+              🟡 Medium
+            </button>
+            <button onclick="setAdminPriority('High')" class="admin-priority-btn py-2 rounded-xl text-sm font-medium border-2 transition-all ${issue.priority === 'High' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600'}" data-priority="High">
+              🔴 High
+            </button>
+          </div>
+
+          <h4 class="font-medium text-gray-700 mb-2">Resolution Comment</h4>
+          <textarea id="admin-comment" rows="3" placeholder="Add notes or resolution details..." class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-surface resize-none">${issue.adminComment || ''}</textarea>
+        </div>
+      `;
+    }
+
+    function setAdminStatus(status) {
+      if (!currentIssue) return;
+      currentIssue.status = status;
+      
+      document.querySelectorAll('.admin-status-btn').forEach(btn => {
+        btn.classList.remove('border-yellow-500', 'bg-yellow-50', 'text-yellow-700');
+        btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        btn.classList.remove('border-green-500', 'bg-green-50', 'text-green-700');
+        btn.classList.add('border-gray-200', 'text-gray-600');
+      });
+
+      const selected = document.querySelector(`[data-status="${status}"]`);
+      if (selected) {
+        selected.classList.remove('border-gray-200', 'text-gray-600');
+        if (status === 'Pending') {
+          selected.classList.add('border-yellow-500', 'bg-yellow-50', 'text-yellow-700');
+        } else if (status === 'In Progress') {
+          selected.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        } else {
+          selected.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+        }
+      }
+    }
+
+    function setAdminPriority(priority) {
+      if (!currentIssue) return;
+      currentIssue.priority = priority;
+      
+      document.querySelectorAll('.admin-priority-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'bg-indigo-50', 'text-indigo-700');
+        btn.classList.remove('border-yellow-500', 'bg-yellow-50', 'text-yellow-700');
+        btn.classList.remove('border-red-500', 'bg-red-50', 'text-red-700');
+        btn.classList.add('border-gray-200', 'text-gray-600');
+      });
+
+      const selected = document.querySelector(`[data-priority="${priority}"]`);
+      if (selected) {
+        selected.classList.remove('border-gray-200', 'text-gray-600');
+        if (priority === 'Low') {
+          selected.classList.add('border-indigo-500', 'bg-indigo-50', 'text-indigo-700');
+        } else if (priority === 'Medium') {
+          selected.classList.add('border-yellow-500', 'bg-yellow-50', 'text-yellow-700');
+        } else {
+          selected.classList.add('border-red-500', 'bg-red-50', 'text-red-700');
+        }
+      }
+    }
+
+    async function saveAdminChanges() {
+      if (!currentIssue) return;
+
+      showLoading(true);
+
+      const comment = document.getElementById('admin-comment')?.value || '';
+      const updatedIssue = {
+        ...currentIssue,
+        adminComment: comment,
+        updatedAt: new Date().toISOString(),
+        resolvedAt: currentIssue.status === 'Resolved' && !currentIssue.resolvedAt 
+          ? new Date().toISOString() 
+          : currentIssue.resolvedAt
+      };
+
+      const result = await window.dataSdk.update(updatedIssue);
+
+      if (result.isOk) {
+        showToast('Issue updated successfully!', 'success');
+        showScreen('admin-dashboard');
+      } else {
+        showToast('Failed to update issue', 'error');
+      }
+
+      showLoading(false);
+    }
+
+    // ========== Utility Functions ==========
+    function getCategoryIcon(category) {
+      const icons = {
+        'Electrical': '⚡',
+        'Lab': '🔬',
+        'Hostel': '🏠',
+        'Network': '📶',
+        'Cleaning': '🧹',
+        'Other': '📋'
+      };
+      return icons[category] || '📋';
+    }
+
+    function formatDate(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cfe5c4fb601b550',t:'MTc3MTQyNjQ3Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

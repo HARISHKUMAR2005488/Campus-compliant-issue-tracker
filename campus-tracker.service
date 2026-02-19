@@ -1,0 +1,30 @@
+[Unit]
+Description=Campus Complaint & Issue Tracker — Flask/Gunicorn
+After=network.target
+
+[Service]
+# Change User/Group to the Linux user you deploy as (default: ec2-user for Amazon Linux, ubuntu for Ubuntu)
+User=ec2-user
+Group=ec2-user
+
+# Path to your project directory on EC2
+WorkingDirectory=/home/ec2-user/campus-tracker
+
+# Load .env variables
+EnvironmentFile=/home/ec2-user/campus-tracker/.env
+
+# Start gunicorn via the venv python (adjust path if you use a different venv location)
+ExecStart=/home/ec2-user/campus-tracker/venv/bin/gunicorn \
+    -c /home/ec2-user/campus-tracker/gunicorn.conf.py \
+    aws:app
+
+# Restart on failure
+Restart=always
+RestartSec=5
+
+# Logging (also captured by gunicorn.conf.py)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
