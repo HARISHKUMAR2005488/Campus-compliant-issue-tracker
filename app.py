@@ -27,6 +27,7 @@ import base64
 import mimetypes
 from datetime import datetime, timezone
 
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 from flask import Flask, request, jsonify, send_from_directory
@@ -80,7 +81,7 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def upload_image_to_s3(base64_data: str, prefix: str = "issues") -> str | None:
+def upload_image_to_s3(base64_data: str, prefix: str = "issues") -> Optional[str]:
     """
     Upload a base64-encoded image to S3 and return the object key.
     Returns None on failure.
@@ -117,7 +118,7 @@ def upload_image_to_s3(base64_data: str, prefix: str = "issues") -> str | None:
         return None
 
 
-def get_presigned_url(key: str) -> str | None:
+def get_presigned_url(key: str) -> Optional[str]:
     """Generate a presigned GET URL for an S3 object."""
     if not key:
         return None
